@@ -7,8 +7,9 @@
 package goesl
 
 import (
-	"github.com/op/go-logging"
 	"os"
+
+	"github.com/op/go-logging"
 )
 
 var (
@@ -26,8 +27,8 @@ func Debug(message string, args ...interface{}) {
 	log.Debug(message, args...)
 }
 
-func Error(message string, args ...interface{}) {
-	log.Error(message, args...)
+func Error(args ...interface{}) {
+	log.Error(args...)
 }
 
 func Notice(message string, args ...interface{}) {
