@@ -22,7 +22,7 @@ import (
 // Message - Freeswitch Message that is received by GoESL. Message struct is here to help with parsing message
 // and dumping its contents. In addition to that it's here to make sure received message is in fact message we wish/can support
 type Message struct {
-	Headers map[string]string
+	Headers map[string]interface{}
 	Body    []byte
 
 	r  *bufio.Reader
@@ -41,7 +41,12 @@ func (m *Message) GetCallUUID() string {
 
 // GetHeader - Will return message header value, or "" if the key is not set.
 func (m *Message) GetHeader(key string) string {
-	return m.Headers[key]
+	if _, ok := m.Headers[key].(string); ok {
+		return m.Headers[key].(string)
+	} else if headerList, ok := m.Headers[key].([]string); ok {
+		return strings.Join(headerList, ",")
+	}
+	return fmt.Sprintf("%v")
 }
 
 // Parse - Will parse out message received from Freeswitch and basically build it accordingly for later use.
@@ -120,12 +125,16 @@ func (m *Message) Parse() error {
 			return fmt.Errorf(EUnsuccessfulReply, string(m.Body)[5:])
 		}
 	case "text/event-json":
-		if err := json.Unmarshal(m.Body, &m.Headers); err != nil {
-			return err
+		if m.Body != nil {
+			if err := json.Unmarshal(m.Body, &m.Headers); err != nil {
+				return err
+			}
 		}
 
-		if v, _ := m.Headers["_body"]; v != "" {
-			m.Body = []byte(v)
+		if v, _ := m.Headers["_body"]; v != nil {
+			if _, ok := v.(string); ok {
+				m.Body = []byte(v.(string))
+			}
 			delete(m.Headers, "_body")
 		} else {
 			m.Body = []byte("")
@@ -188,7 +197,7 @@ func newMessage(r *bufio.Reader, autoParse bool) (*Message, error) {
 	msg := Message{
 		r:       r,
 		tr:      textproto.NewReader(r),
-		Headers: make(map[string]string),
+		Headers: make(map[string]interface{}),
 	}
 
 	if autoParse {
